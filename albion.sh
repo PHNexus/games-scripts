@@ -1,3 +1,21 @@
+#!/bin/bash
+
+set -e
+
+sudo pacman -S --needed --noconfirm gamescope mangohud gamemode xclip wl-clipboard
+
+DEFAULT_PATH="$HOME/.steam/steam/steamapps/common/Albion Online"
+
+if [ -d "$DEFAULT_PATH" ]; then
+    TARGET_DIR="$DEFAULT_PATH"
+else
+    read -p "Path: " TARGET_DIR
+fi
+
+mkdir -p "$TARGET_DIR"
+TARGET_SCRIPT="$TARGET_DIR/albion.sh"
+
+cat << 'EOF' > "$TARGET_SCRIPT"
 #!/bin/sh
 SCRIPT="$(readlink -f "$0")"
 SCRIPTPATH="$(dirname "$SCRIPT")"
@@ -48,3 +66,6 @@ exec gamescope \
   --immediate-flips \
   -- \
   gamemoderun "$SCRIPTPATH/launcher/Albion-Online" "--no-sandbox"
+EOF
+
+chmod +x "$TARGET_SCRIPT"
