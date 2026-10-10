@@ -13,7 +13,7 @@ Linux scripts for optimizing and customizing specific games.
 
 | Game | Script | Description |
 |---|---|---|
-| Albion Online | [`albion.sh`](albion.sh) | Custom launch configuration with Gamescope, MangoHud, and GameMode. |
+| Albion Online | [`albion.sh`](albion.sh) | Custom launch configuration with Gamescope and GameMode. |
 | Counter-Strike 2 | [`cs2.sh`](cs2.sh) | Custom Linux game launch script. |
 | The Elder Scrolls Online | [`eso.sh`](eso.sh) | Custom game launch script. |
 
