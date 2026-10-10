@@ -2,7 +2,7 @@
 
 set -e
 
-sudo pacman -S --needed --noconfirm gamescope mangohud gamemode xclip wl-clipboard
+sudo pacman -S --needed --noconfirm gamescope gamemode xclip wl-clipboard
 
 DEFAULT_PATH="$HOME/.steam/steam/steamapps/common/Albion Online"
 
@@ -32,9 +32,6 @@ export __VK_LAYER_NV_optimus=NVIDIA_only
 export VK_LOADER_DEBUG=none
 export mesa_glthread=true
 
-export MANGOHUD=1
-export MANGOHUD_CONFIG="gpu_stats,gpu_temp,gpu_power,cpu_stats,cpu_temp,ram,vram,fps,frametime,frame_timing,position=top-left,font_size=20"
-
 export XKB_DEFAULT_LAYOUT=es
 export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-1}"
 
@@ -51,21 +48,4 @@ _clipboard_bridge() {
 }
 _clipboard_bridge &
 BRIDGE_PID=$!
-trap 'kill $BRIDGE_PID 2>/dev/null' EXIT
-
-exec gamescope \
-  -w 1920 -h 1080 \
-  -W 1920 -H 1080 \
-  -r 180 \
-  -f \
-  --fullscreen-state \
-  -S stretch \
-  --expose-wayland \
-  --force-grab-cursor \
-  --adaptive-sync \
-  --immediate-flips \
-  -- \
-  gamemoderun "$SCRIPTPATH/launcher/Albion-Online" "--no-sandbox"
-EOF
-
-chmod +x "$TARGET_SCRIPT"
+trap 'kill $BRIDGE_PID
