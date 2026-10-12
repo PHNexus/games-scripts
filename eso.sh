@@ -34,27 +34,54 @@ get_hz() {
 target_hz=$(get_hz)
 
 user_settings=""
+search_roots=()
 
-search_roots=(
+add_search_root() {
+    local candidate="$1"
+    local resolved
+    local existing
+
+    [[ -d "$candidate" ]] || return 0
+    resolved="$(realpath -m -- "$candidate" 2>/dev/null || printf '%s' "$candidate")"
+
+    for existing in "${search_roots[@]}"; do
+        [[ "$existing" == "$resolved" ]] && return 0
+    done
+
+    search_roots+=("$resolved")
+}
+
+steam_roots=(
     "$HOME/.steam/steam"
     "$HOME/.local/share/Steam"
-    "/media"
-    "/mnt"
-    "/home"
-    "/run/media"
+    "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam"
+    "$HOME/.var/app/com.valvesoftware.Steam/data/Steam"
 )
 
-for root in "${search_roots[@]}"; do
-    if [ -d "$root" ]; then
-        found=$(find "$root" -maxdepth 10 -type f -path "*/compatdata/306130/pfx/drive_c/users/*/Documents/Elder Scrolls Online/live/UserSettings.txt" 2>/dev/null | head -n 1)
-        if [ -n "$found" ] && [ -f "$found" ]; then
-            user_settings="$found"
-            break
-        fi
+for steam_root in "${steam_roots[@]}"; do
+    add_search_root "$steam_root"
+
+    library_file="$steam_root/steamapps/libraryfolders.vdf"
+    if [[ -r "$library_file" ]]; then
+        while IFS= read -r library_path; do
+            [[ -n "$library_path" ]] && add_search_root "$library_path"
+        done < <(sed -nE 's/^[[:space:]]*"path"[[:space:]]*"([^\"]+)".*/\1/p; s/^[[:space:]]*"[0-9]+"[[:space:]]*"([^\"]+)".*/\1/p' "$library_file")
     fi
 done
 
-if [ -z "$user_settings" ] || [ ! -f "$user_settings" ]; then
+for root in "$HOME" "/media" "/mnt" "/run/media" "/home"; do
+    add_search_root "$root"
+done
+
+for root in "${search_roots[@]}"; do
+    found=$(find "$root" -maxdepth 14 -type f -path "*/compatdata/306130/pfx/drive_c/users/*/Documents/Elder Scrolls Online/live/UserSettings.txt" 2>/dev/null | head -n 1)
+    if [[ -n "$found" && -f "$found" ]]; then
+        user_settings="$found"
+        break
+    fi
+done
+
+if [[ -z "$user_settings" || ! -f "$user_settings" ]]; then
     exit 1
 fi
 
