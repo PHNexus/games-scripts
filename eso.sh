@@ -34,52 +34,53 @@ get_hz() {
 target_hz=$(get_hz)
 
 user_settings=""
-search_roots=()
 
-add_search_root() {
-    local candidate="$1"
-    local resolved
-    local existing
-
-    [[ -d "$candidate" ]] || return 0
-    resolved="$(realpath -m -- "$candidate" 2>/dev/null || printf '%s' "$candidate")"
-
-    for existing in "${search_roots[@]}"; do
-        [[ "$existing" == "$resolved" ]] && return 0
-    done
-
-    search_roots+=("$resolved")
-}
-
-steam_roots=(
-    "$HOME/.steam/steam"
-    "$HOME/.local/share/Steam"
-    "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam"
-    "$HOME/.var/app/com.valvesoftware.Steam/data/Steam"
+known_patterns=(
+    "compatdata/306130/pfx/drive_c/users/steamuser/Documents/Elder Scrolls Online/live/UserSettings.txt"
+    "compatdata/306130/pfx/drive_c/users/*/Documents/Elder Scrolls Online/live/UserSettings.txt"
 )
 
-for steam_root in "${steam_roots[@]}"; do
-    add_search_root "$steam_root"
-
-    library_file="$steam_root/steamapps/libraryfolders.vdf"
-    if [[ -r "$library_file" ]]; then
-        while IFS= read -r library_path; do
-            [[ -n "$library_path" ]] && add_search_root "$library_path"
-        done < <(sed -nE 's/^[[:space:]]*"path"[[:space:]]*"([^\"]+)".*/\1/p; s/^[[:space:]]*"[0-9]+"[[:space:]]*"([^\"]+)".*/\1/p' "$library_file")
-    fi
+for base in \
+    "$HOME/.steam/steam/steamapps" \
+    "$HOME/.local/share/Steam/steamapps" \
+    "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps" \
+    "$HOME/.var/app/com.valvesoftware.Steam/data/Steam/steamapps"; do
+    [[ -d "$base" ]] || continue
+    for pattern in "${known_patterns[@]}"; do
+        for f in "$base"/$pattern; do
+            if [[ -f "$f" ]]; then
+                user_settings="$f"
+                break 3
+            fi
+        done
+    done
 done
 
-for root in "$HOME" "/media" "/mnt" "/run/media" "/home"; do
-    add_search_root "$root"
-done
+if [[ -z "$user_settings" ]]; then
+    search_roots=()
+    for candidate in \
+        "$HOME/.steam/steam" \
+        "$HOME/.local/share/Steam" \
+        "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam" \
+        "$HOME/.var/app/com.valvesoftware.Steam/data/Steam"; do
+        [[ -d "$candidate" ]] && search_roots+=("$candidate")
 
-for root in "${search_roots[@]}"; do
-    found=$(find "$root" -maxdepth 14 -type f -path "*/compatdata/306130/pfx/drive_c/users/*/Documents/Elder Scrolls Online/live/UserSettings.txt" 2>/dev/null | head -n 1)
-    if [[ -n "$found" && -f "$found" ]]; then
-        user_settings="$found"
-        break
-    fi
-done
+        lib_file="$candidate/steamapps/libraryfolders.vdf"
+        if [[ -r "$lib_file" ]]; then
+            while IFS= read -r lib_path; do
+                [[ -d "$lib_path" ]] && search_roots+=("$lib_path")
+            done < <(sed -nE 's/^[[:space:]]*"path"[[:space:]]*"([^"]+)".*/\1/p; s/^[[:space:]]*"[0-9]+"[[:space:]]*"([^"]+)".*/\1/p' "$lib_file")
+        fi
+    done
+
+    for root in "${search_roots[@]}"; do
+        found=$(find "$root" -maxdepth 6 -type f -path "*/compatdata/306130/pfx/drive_c/users/*/Documents/Elder Scrolls Online/live/UserSettings.txt" 2>/dev/null | head -n 1)
+        if [[ -n "$found" && -f "$found" ]]; then
+            user_settings="$found"
+            break
+        fi
+    done
+fi
 
 if [[ -z "$user_settings" || ! -f "$user_settings" ]]; then
     exit 1

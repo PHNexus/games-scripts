@@ -1,76 +1,77 @@
 #!/bin/bash
 
-GAMEROOT="$(cd -- "$(dirname -- "$(readlink -f -- "$0")")" && pwd)"
-SCRIPTNAME="$(basename "$0")"
+set -Eeuo pipefail
 
-[[ "$*" == *"-dedicated"* ]] && DEDICATED_SERVER=1 || DEDICATED_SERVER=0
+declare -a lib_roots=()
+declare -A seen_roots=()
 
-UNAMEPATH="$(command -v uname)"
-if [ -z "$UNAMEPATH" ]; then
-    if [ -f /usr/bin/uname ]; then
-        UNAMEPATH=/usr/bin/uname
-    elif [ -f /bin/uname ]; then
-        UNAMEPATH=/bin/uname
-    fi
-fi
-UNAME="$($UNAMEPATH)"
-if [ "$UNAME" = "Darwin" ]; then
-   if [ "$STEAM_DYLD_INSERT_LIBRARIES" != "" ] && [ "$DYLD_INSERT_LIBRARIES" == "" ]; then
-      export DYLD_INSERT_LIBRARIES="$STEAM_DYLD_INSERT_LIBRARIES"
-   fi
-   export DYLD_LIBRARY_PATH="${GAMEROOT}"/bin/osx64:$DYLD_LIBRARY_PATH
-elif [ "$UNAME" = "Linux" ]; then
-    . /etc/os-release
-    if [ "$DEDICATED_SERVER" = "0" ] && [ "$VERSION_CODENAME" != "sniper" ]; then
-        echo
-        echo "FATAL: It appears $SCRIPTNAME was not launched within the Steam for Linux sniper runtime environment."
-        echo "FATAL: Please consult documentation to ensure correct configuration, aborting."
-        echo
-        exit 1
-    fi
+add_root() {
+    local path="$1"
+    [[ -d "$path" ]] || return 0
+    local resolved
+    resolved="$(realpath -m -- "$path" 2>/dev/null || printf '%s' "$path")"
+    [[ -n "${seen_roots[$resolved]:-}" ]] && return 0
+    seen_roots["$resolved"]=1
+    lib_roots+=("$resolved")
+}
 
-   export LD_LIBRARY_PATH="${GAMEROOT}"/bin/linuxsteamrt64:$LD_LIBRARY_PATH
-   USE_STEAM_RUNTIME=1
-fi
+add_root "$HOME/.steam/steam"
+add_root "$HOME/.local/share/Steam"
+add_root "$HOME/.var/app/com.valvesoftware.Steam/.local/share/Steam"
+add_root "$HOME/.var/app/com.valvesoftware.Steam/data/Steam"
 
-if [ -z "$GAMEEXE" ]; then
-   if [ "$UNAME" = "Darwin" ]; then
-      GAMEEXE=bin/osx64/cs2.app/Contents/MacOS/cs2
-   elif [ "$UNAME" = "Linux" ]; then
-      GAMEEXE=bin/linuxsteamrt64/cs2
-   fi
-fi
+while IFS= read -r vdf; do
+    [[ -n "$vdf" ]] || continue
+    while IFS= read -r lib; do
+        [[ -n "$lib" ]] || continue
+        add_root "$lib"
+    done < <(sed -nE 's/^[[:space:]]*"path"[[:space:]]*"([^"]+)".*/\1/p; s/^[[:space:]]*"[0-9]+"[[:space:]]*"([^"]+)".*/\1/p' "$vdf" | sort -u)
+done < <(find "$HOME" -maxdepth 5 -name "libraryfolders.vdf" -type f 2>/dev/null)
 
-ulimit -n 65535
-ulimit -Ss 2048
-
-cd "$GAMEROOT"
-
-if [ "$UNAME" = "Linux" ]; then
-    export ENABLE_PATHMATCH=1
-fi
-
-if [ "$UNAME" = "Linux" ]; then
-    export SDL_VIDEO_DRIVER=wayland
-fi
-
-STATUS=42
-while [ $STATUS -eq 42 ]; do
-    if [ "${GAME_DEBUGGER}" == "gdb" ] || [ "${GAME_DEBUGGER}" == "cgdb" ]; then
-        ARGSFILE=$(mktemp "$USER.cs2.gdb.XXXX")
-        echo b main > "$ARGSFILE"
-        echo set env LD_PRELOAD=$LD_PRELOAD >> "$ARGSFILE"
-        echo show env LD_PRELOAD >> "$ARGSFILE"
-        unset LD_PRELOAD
-        echo run $@ >> "$ARGSFILE"
-        echo show args >> "$ARGSFILE"
-        ${GAME_DEBUGGER} "${GAMEROOT}"/${GAMEEXE} -x "$ARGSFILE"
-        rm "$ARGSFILE"
-    elif [ "${GAME_DEBUGGER}" == "lldb" ]; then
-        ${GAME_DEBUGGER} "${GAMEROOT}"/${GAMEEXE} --$@
-    else
-        ${STEAM_RUNTIME_PREFIX} ${GAME_DEBUGGER} "${GAMEROOT}"/${GAMEEXE} "$@"
-    fi
-    STATUS=$?
+TARGET=""
+for root in "${lib_roots[@]}"; do
+    for pattern in \
+        "$root/steamapps/common/Counter-Strike Global Offensive/game/cs2.sh" \
+        "$root/steamapps/common/Counter-Strike Global Offensive/cs2.sh"; do
+        if [[ -f "$pattern" ]]; then
+            TARGET="$pattern"
+            break 2
+        fi
+    done
 done
-exit $STATUS
+
+[[ -n "$TARGET" ]] || exit 1
+
+python3 - "$TARGET" <<'PY'
+import re
+import sys
+
+path = sys.argv[1]
+with open(path) as f:
+    content = f.read()
+
+content = re.sub(
+    r'[ \t]*\.[ \t]+/etc/os-release[ \t]*\n(?:.*\n)*?[ \t]*fi[ \t]*\n',
+    '',
+    content,
+    count=1,
+)
+
+if 'SDL_VIDEO_DRIVER' not in content:
+    content = content.replace(
+        'if [ "$UNAME" = "Linux" ]; then\n    export LD_LIBRARY_PATH=',
+        'if [ "$UNAME" = "Linux" ]; then\n    export SDL_VIDEO_DRIVER=wayland\n    export LD_LIBRARY_PATH=',
+        1,
+    )
+
+content = re.sub(
+    r'export SDL_VIDEO_DRIVER=.*',
+    'export SDL_VIDEO_DRIVER=wayland',
+    content,
+)
+
+with open(path, 'w') as f:
+    f.write(content)
+PY
+
+chmod +x -- "$TARGET"
