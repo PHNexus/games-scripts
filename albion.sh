@@ -21,6 +21,10 @@ SCRIPT="$(readlink -f "$0")"
 SCRIPTPATH="$(dirname "$SCRIPT")"
 cd "$SCRIPTPATH" || exit 1
 
+sed -i -e '/Screenmanager Is Fullscreen mode/d' "$HOME/.config/unity3d/Sandbox Interactive GmbH/Albion Online Client/prefs"
+sed -i -e '/Screenmanager Resolution Height/d' "$HOME/.config/unity3d/Sandbox Interactive GmbH/Albion Online Client/prefs"
+sed -i -e '/Screenmanager Resolution Width/d' "$HOME/.config/unity3d/Sandbox Interactive GmbH/Albion Online Client/prefs"
+
 export QT_QPA_PLATFORM_PLUGIN_PATH="$SCRIPTPATH/launcher/plugins/platforms"
 export QT_PLUGIN_PATH="$SCRIPTPATH/launcher/plugins/"
 export QT_QPA_PLATFORM="xcb;eglfs"
@@ -48,4 +52,19 @@ _clipboard_bridge() {
 }
 _clipboard_bridge &
 BRIDGE_PID=$!
-trap 'kill $BRIDGE_PID
+trap 'kill $BRIDGE_PID 2>/dev/null' EXIT
+
+exec gamescope \
+  -w 1920 -h 1080 \
+  -W 1920 -H 1080 \
+  -r 180 \
+  -f \
+  --fullscreen-state \
+  -S stretch \
+  --expose-wayland \
+  --force-grab-cursor \
+  --adaptive-sync \
+  --immediate-flips \
+  -- \
+  gamemoderun "$SCRIPTPATH/launcher/Albion-Online" "--no-sandbox"
+EOF
