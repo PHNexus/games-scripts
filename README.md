@@ -23,7 +23,7 @@ Automatically detect game installations and apply launch tweaks, configuration p
 |---|---|---|
 | **Albion Online** | [`albion.sh`](albion.sh) | Sets up Gamescope and GameMode, matches display settings, and bridges the Wayland/X11 clipboard. |
 | **Counter-Strike 2** | [`cs2.sh`](cs2.sh) | Patches the game launcher, enables the Wayland SDL backend, and restores executable permissions. |
-| **The Elder Scrolls** | [`eso.sh`](eso.sh) | Updates Proton configuration settings to match the display refresh rate. |
+| **The Elder Scrolls Online** | [`eso.sh`](eso.sh) | Updates Proton configuration settings to match the display refresh rate. |
 | **eFootball** | [`eFootball.sh`](eFootball.sh) | Creates a Gamescope wrapper and automatically updates Steam launch options. |
 
 ## Requirements
