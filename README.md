@@ -1,34 +1,55 @@
-[![Platform](https://img.shields.io/badge/platform-Linux-FCC624?logo=linux&logoColor=black)](https://www.kernel.org/)
-[![Shell](https://img.shields.io/badge/shell-Bash-4EAA25?logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
-[![License](https://img.shields.io/github/license/PHNexus/games-scripts?color=blue)](LICENSE)
-[![Last Commit](https://img.shields.io/github/last-commit/PHNexus/games-scripts?color=green)](https://github.com/PHNexus/games-scripts/commits/main)
+ <div align="center">
+
+# Games Scripts
+
+**Linux gaming scripts for Wayland and Hyprland**
+
+<p>
+  <a href="https://www.kernel.org/"><img src="https://img.shields.io/badge/platform-Linux-FCC624?logo=linux&logoColor=black" alt="Platform"></a>
+  <a href="https://www.gnu.org/software/bash/"><img src="https://img.shields.io/badge/shell-Bash-4EAA25?logo=gnubash&logoColor=white" alt="Shell"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/PHNexus/games-scripts?color=blue" alt="License"></a>
+  <a href="https://github.com/PHNexus/games-scripts/commits/main"><img src="https://img.shields.io/github/last-commit/PHNexus/games-scripts?color=green" alt="Last Commit"></a>
+</p>
+
+Automatically detect game installations and apply launch tweaks, configuration patches, and performance-related settings. No manual path hunting.
+
+</div>
 
 ---
 
-## Games Scripts
-
-Linux scripts that **auto-detect** game installations and **patch or wrap** them for a better experience on Wayland + Hyprland. No manual path hunting, no editing config files by hand.
-
 ## Scripts
 
-| Game | Script | What it does |
+| Game | Script | Description |
 |---|---|---|
-| **Albion Online** | [`albion.sh`](albion.sh) | Finds the Steam install and replaces the game/launcher binaries with wrappers that:<br>• Auto-detect monitor resolution + refresh rate (`hyprctl`, fallback to `xrandr`)<br>• Launch the game through **Gamescope** (fullscreen, matched resolution/refresh, stretch scaling) + **GameMode**<br>• Bridge the clipboard between Wayland and X11 (`wl-paste` → `xclip`)<br>• Inject Qt / NVIDIA / GL / Vulkan env vars and strip fullscreen prefs from Unity's `prefs` file |
-| **Counter-Strike 2** | [`cs2.sh`](cs2.sh) | Locates CS2's `game/cs2.sh` inside the Steam library and patches it to:<br>• Remove the "sniper runtime" check that aborts outside Steam<br>• Force `SDL_VIDEO_DRIVER=wayland`<br>• Restore the executable bit |
-| **The Elder Scrolls Online** | [`eso.sh`](eso.sh) | Finds ESO's `UserSettings.txt` inside the Steam Proton prefix and rewrites it to:<br>• Set `BACKGROUND_FPS_LIMIT` to your monitor's max refresh rate<br>• Enable `USE_BACKGROUND_FPS_LIMIT`<br>• Set `MinFrameTime.2` to `1 / Hz` (uncaps the framerate to match the display) |
-| **eFootball** | [`efootball-auto.sh`](efootball-auto.sh) | Locates eFootball inside the Steam library and fully automates setup by:<br>• Auto-detecting monitor resolution and max refresh rate (`hyprctl` or DRM/sysfs)<br>• Creating a **Gamescope** wrapper script (fullscreen, stretch scaling, matched resolution/refresh) combined with **GameMode**<br>• Automatically injecting the wrapper into Steam's `localconfig.vdf` launch options for the game |
+| **Albion Online** | [`albion.sh`](albion.sh) | Sets up Gamescope and GameMode, matches display settings, and bridges the Wayland/X11 clipboard. |
+| **Counter-Strike 2** | [`cs2.sh`](cs2.sh) | Patches the game launcher, enables the Wayland SDL backend, and restores executable permissions. |
+| **The Elder Scrolls Online** | [`eso.sh`](eso.sh) | Updates Proton configuration settings to match the display refresh rate. |
+| **eFootball** | [`eFootball.sh`](eFootball.sh) | Creates a Gamescope wrapper and automatically updates Steam launch options. |
 
 ## Requirements
 
-- Arch Linux (or any distro with `pacman` for `albion.sh`)
-- Steam (native or Flatpak)
-- Hyprland (for `hyprctl`-based auto-detection; `xrandr`/`drm` fallbacks exist)
-- `jq`, `gamescope`, `gamemode`, `xclip`, `wl-clipboard` (installed automatically by `albion.sh`)
-- Python 3 (required by `efootball-auto.sh` to update Steam launch options automatically)
+- **OS:** Arch Linux recommended; `pacman` is required by `albion.sh`.
+- **Steam:** Native or Flatpak.
+- **Display:** Hyprland recommended; available `xrandr` or DRM fallbacks depend on the script.
+- **Albion Online:** Required dependencies are installed automatically by `albion.sh`.
+- **eFootball:** Python 3 is required to update Steam launch options.
+
+## Installation
+
+```bash
+git clone --depth=1 https://github.com/PHNexus/games-scripts.git
+cd games-scripts
+chmod +x *.sh
+```
 
 ## Usage
 
+Run the script for your game:
+
 ```bash
-git clone --depth=1 [https://github.com/PHNexus/games-scripts.git](https://github.com/PHNexus/games-scripts.git)
-cd games-scripts
-chmod +x *.sh
+./albion.sh
+./cs2.sh
+./eso.sh
+./efootball-auto.sh
+```
+
